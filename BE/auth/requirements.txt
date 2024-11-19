@@ -1,0 +1,7 @@
+Django>=4.2.0
+psycopg[binary]
+djangorestframework
+django-filter
+drf-yasg
+django-cors-headers
+requests

@@ -1,0 +1,114 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: fe-app-node-gateway
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "*"
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    tls:
+      mode: SIMPLE
+      credentialName: fe-app-node-tls
+    hosts:
+    - "*"
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: fe-app-node-service
+spec:
+  hosts:
+  - "*"
+  gateways:
+  - fe-app-node-gateway
+  http:
+  - match:
+    - uri:
+        prefix: "/api"
+    route:
+    - destination:
+        host: django-auth
+        port:
+          number: 8001
+  - match:
+    - port: 80
+    - uri:
+        prefix: "/"
+    route:
+    - destination:
+        host: fe-app-node
+        port:
+          number: 80
+  - match:
+    - port: 443
+    - uri:
+        prefix: "/"
+    route:
+    - destination:
+        host: fe-app-node
+        port:
+          number: 443
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fe-app-node
+  labels:
+    app: fe-app-node
+spec:
+  selector:
+    app: fe-app-node
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3001  # Node.js 애플리케이션 포트로 매핑
+      name: http
+    - protocol: TCP
+      port: 443
+      targetPort: 3001  # Node.js 애플리케이션 포트로 매핑
+      name: https
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fe-app-node-deployment
+  labels:
+    app: fe-app-node
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fe-app-node
+  template:
+    metadata:
+      labels:
+        app: fe-app-node
+    spec:
+      containers:
+      - name: fe-app-node
+        image: fe-app-node:1.0  # Node.js 애플리케이션 이미지
+        ports:
+        - containerPort: 3001  # Node.js 애플리케이션이 사용하는 포트
+        env:
+        - name: DJANGO_AUTH_HOST
+          valueFrom:
+            secretKeyRef:
+              name: fe-app-node-secrets
+              key: DJANGO_AUTH_HOST
+        - name: UID
+          valueFrom:
+            secretKeyRef:
+              name: fe-app-node-secrets
+              key: UID
+---

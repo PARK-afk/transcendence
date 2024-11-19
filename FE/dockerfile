@@ -1,0 +1,23 @@
+# Node.js의 공식 이미지를 사용
+FROM node:14-alpine
+
+RUN apk add --no-cache bash
+
+# 작업 디렉토리를 생성하고 설정
+WORKDIR /usr/src/app
+
+
+# 애플리케이션 소스 코드를 컨테이너에 복사
+COPY .env ../
+COPY .env ../.env.example
+COPY ./app .
+
+RUN npm install --save-dev
+RUN npm run build
+
+# 컨테이너의 3001번 포트를 개방
+EXPOSE 3001
+
+# 애플리케이션 실행
+# CMD ["npx", "http-server", "dist", "-p", "80"]
+CMD ["npm", "run", "start"]
